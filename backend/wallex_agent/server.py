@@ -719,6 +719,17 @@ def _persona_record(p: dict) -> dict:
     return rec
 
 
+def _open_symbols(state: dict) -> list:
+    """Symbols held by a session. An engine session keeps its positions as a dict; a followed trader's copy
+    (traders.Follower) keeps the trader's positions as a list, or None before its first poll, and holds its own coins
+    in `holdings`."""
+    pos = state.get("positions")
+    if isinstance(pos, dict):
+        return [x.get("symbol") for x in pos.values() if isinstance(x, dict)]
+    holdings = state.get("holdings")
+    return list(holdings) if isinstance(holdings, dict) else []
+
+
 def _track_record(d: Path) -> dict:
     """A shadow session's results from its journal directory: equity curve, return, drawdown, trades."""
     rec: dict = {}
@@ -750,7 +761,7 @@ def _track_record(d: Path) -> dict:
         "trades": len(trades), "wins": sum(1 for x in pnls if x > 0),
         "win_rate_pct": round(100 * sum(1 for x in pnls if x > 0) / len(pnls), 1) if pnls else None,
         "realized_pnl_tmn": round(sum(pnls)),
-        "open_positions": [x.get("symbol") for x in state.get("positions", {}).values()],
+        "open_positions": _open_symbols(state),
         "core": (state.get("core") or {}).get("status"),
         "curve": [[int(r[0]), round(float(r[1]))] for r in rows[::step]] + ([[int(rows[-1][0]), round(float(rows[-1][1]))]]
                                                                              if rows and (len(rows) - 1) % step else []),

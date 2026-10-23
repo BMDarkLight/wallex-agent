@@ -283,6 +283,11 @@ def test_live_traders_are_listed_added_and_removed(srv, monkeypatch):
     r = c.get("/api/personas").json()["traders"]
     assert len(r) == 1 and r[0]["name"] == "Famous" and r[0]["source"] == "pinned" and r[0]["return_pct"] == 1.0
     assert r[0]["positions"][0]["coin"] == "BTC" and r[0]["account_usd"] == 2e6
+    state = {"cash_usdt": 10.0, "holdings": {"BTCUSDT": 0.1}, "positions": [{"coin": "BTC", "side": "long"}]}
+    (run / "state.json").write_text(json.dumps(state))                  # a follower's state: positions is a list
+    assert c.get("/api/personas").json()["traders"][0]["open_positions"] == ["BTCUSDT"]
+    (run / "state.json").write_text(json.dumps({**state, "positions": None}))   # before its first poll
+    assert c.get("/api/personas").json()["traders"][0]["open_positions"] == ["BTCUSDT"]
     assert c.delete(f"/api/traders/{addr}").json()["ok"] and c.get("/api/traders").json()["traders"] == []
 
 
